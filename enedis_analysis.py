@@ -1,21 +1,27 @@
 import numpy as np
 import csv
+import dateutil, datetime
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
-import dateutil, datetime
+from matplotlib.lines import Line2D
 
 
 class Enedis_analyse():
 
-    def __init__(self, filename):
+    def __init__(self, filename, c0=0, c1=-1):
+        ''' filename : path to .csv file from Enedis
+            c0 [0], c1 [-1] : indexes of data[c0:c1] where average is performed 
+        '''
         self.filename = filename 
         self.read_csv()
         self.get_time_cons()
-        self.plots()
+        self.make_day_dic(c0=c0, c1=c1)
+        self.plots(c0=c0, c1=c1)
 
 
     def read_csv(self):
         ''' read and make self.data = list of ['data_time', 'cons'] '''
+        print('read_csv(): reading file...')
         data = [] 
         f = open(self.filename, 'r')
         reader = csv.reader(f, delimiter=';')
@@ -27,6 +33,7 @@ class Enedis_analyse():
 
 
     def get_time_cons(self):
+        print('get_time_cons(): extracting time and consumption...')
         time_posix = []
         time_midnight = []
         time_parser = []
@@ -35,14 +42,14 @@ class Enedis_analyse():
             tparse = dateutil.parser.parse(t)
             time_parser = np.append(time_parser, tparse)
             time_posix.append(tparse.timestamp())
-            print(time_posix[-1], t)
+            #print(time_posix[-1], t)
             # get midnights:
             if tparse.hour == 0 and tparse.minute == 0:
                 time_midnight.append(tparse.timestamp())
-                print(f'* {time_posix[-1]}')
+                #print(f'* {time_posix[-1]}')
         self.time_parser = time_parser
         self.time_posix = time_posix
-        self.time_midnight = time_midnight
+        self.time_midnight = np.unique(time_midnight)
         self.time_str = time_str
         # consumation:
         self.cons = [int(data[1]) if data[1]!='' else None for data in self.data]
@@ -50,6 +57,7 @@ class Enedis_analyse():
     
     def make_day_dic(self, c0=0, c1=-1):
         ''' make day_dic = d['h.m']=cons  '''
+        print(f'make_day_dic(): averaging data in {c0}:{c1}')
         # init day_dic:
         day_dic = {}
         for h in range(24):
@@ -81,19 +89,21 @@ class Enedis_analyse():
         ax1.plot(self.time_posix, self.cons, 'o', ms=1)
         ax1.plot(self.time_posix[c0:c1], self.cons[c0:c1], '.', ms=2, color='tab:orange')
         for time_midnight in self.time_midnight:
-            ax1.axvline(time_midnight, alpha=0.2)
+            ax1.axvline(time_midnight, alpha=0.1, color='k')
         ax1.xaxis.set_major_formatter(formatter)
         ax1.set_ylabel('Cons. (W)')
         ax1.grid(False)
+        ax1.set_title('Full data', loc='left', fontsize=8)
 
         ax2 = fig1.add_subplot(312)
         ax2.plot(self.time_posix[c0:c1], self.cons[c0:c1], '-', ms=2, color='tab:orange')
         for time_midnight in self.time_midnight:
-            ax2.axvline(time_midnight, alpha=0.1)
+            ax2.axvline(time_midnight, alpha=0.1, color='k')
         ax2.set_xlim([self.time_posix[c0]-10000, self.time_posix[c1]])
         ax2.xaxis.set_major_formatter(formatter)
         ax2.set_ylabel('Cons. (W)')
         ax2.grid(False)
+        ax2.set_title('Selected data', loc='left', fontsize=8)
 
         ax3 = fig1.add_subplot(313)
         for k in self.day_dic:
@@ -101,8 +111,12 @@ class Enedis_analyse():
         for k in self.day_avg:
             ax3.plot(float(k.replace('30', '50')), self.day_avg[k], 'o', color='tab:orange')
             ax3.plot(float(k.replace('30', '50')), self.day_med[k], '.', color='tab:red', alpha=0.8)
+        legend_el = [Line2D([0], [0], marker='o', color='w', label='mean', markerfacecolor='tab:orange', markersize=7),
+                     Line2D([0], [0], marker='o', color='w', label='median', markerfacecolor='tab:red', markersize=4)]
+        ax3.legend(handles=legend_el, fontsize=8)
         ax3.set_xlabel('Hour')
         ax3.set_ylabel(r'$\langle$Cons.$\rangle$ (W)')
+        ax3.set_title('Daily average', loc='left', fontsize=8)
         fig1.tight_layout()
 
 
