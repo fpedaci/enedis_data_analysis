@@ -6,9 +6,13 @@ Once the .csv file is downloaded from the Enedis website, this script reads it a
 Usage from python or ipython:
 ```python
 import enedis_analysis
-ea = enedis_analysis.Enedis_analyse('Enedis_Conso_Heure_20201001-20210115_24307235764360.csv', c0=3000, c1=-1)
+
+# plots all the data and the daily average between index c0 and c1:
+ea = enedis_analysis.Enedis_analyse('Enedis_Conso.csv', c0=3000, c1=-1)
+
+# optional, change c0,c1:
 ea.plots(c0=2000,c1=3000)
 ```
 
-<img src="Screenshot.png" alt="drawing" width="400"/>
+<img src="Screenshot.png" alt="drawing" width="500"/>
 
